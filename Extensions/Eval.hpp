@@ -18,6 +18,4 @@ namespace Extensions
 }//namespace Extensions
 
 #include "Eval/_Eval.hpp"
-
-
 #endif
