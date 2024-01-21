@@ -47,7 +47,7 @@ namespace Extensions
 				if (GetExponential == false)
 				{
 					if (GetNum || GetDecimalPoint)return false;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
 					if (strlen(Minus) == 0)strcpy_s(Minus, sizeof(Minus), "-");
 					else strcpy_s(Minus, sizeof(Minus), "");
 #else
@@ -58,7 +58,7 @@ namespace Extensions
 				}
 				else {
 					if (GetExponentialNum)return false;
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER)
 					if (strlen(ExponentialMinus) == 0)strcpy_s(ExponentialMinus, sizeof(ExponentialMinus), "-");
 					else strcpy_s(ExponentialMinus, sizeof(ExponentialMinus), "");
 #else
@@ -102,34 +102,76 @@ namespace Extensions
 	{
 		for (size_t Count{}; Count < Size - 1; Count++) { Src[Count] = '\0'; };
 	}
-	void EraseSpace(const char* Str1, char* Str2, size_t Size)
+	void EraseSpace(char* Str, size_t Size)
 	{
-		char Buffer[16]{};
-		Extensions::StrClear(Str2, Size);
-		for (size_t Count{}; Count < strlen(Str1);)
+		char Buffer[16]{}, Str2[Extensions::BufferSize]{};
+		size_t sl = strlen(Str);
+
+		for (size_t Count{}; Count < strlen(Str);)
 		{
 			Extensions::StrClear(Buffer, sizeof(Buffer));
-			if (Extensions::IsDBCS(Str1[Count]) == false)
+			if (Extensions::IsDBCS(Str[Count]) == false)
 			{
-				for (size_t BCount{}; BCount < SINGLEBYTE; BCount++) { Buffer[BCount] = Str1[Count + BCount]; };
+				for (size_t BCount{}; BCount < SINGLEBYTE; BCount++) { Buffer[BCount] = Str[Count + BCount]; };
 				Buffer[SINGLEBYTE] = '\0';
 				Count += SINGLEBYTE;
 			}
 			else {
-				for (size_t BCount{}; BCount < MULTIBYTE; BCount++) { Buffer[BCount] = Str1[Count + BCount]; };
+				for (size_t BCount{}; BCount < MULTIBYTE; BCount++) { Buffer[BCount] = Str[Count + BCount]; };
 				Buffer[MULTIBYTE] = '\0';
 				Count += MULTIBYTE;
 			}
 			if (strcmp(Buffer, " ") != 0 && strcmp(Buffer, "@") != 0)
 			{
-#if defined(_WIN32) || defined(_WIN64)
-				strcat_s(Str2, Size, Buffer);
+#if defined(_MSC_VER)
+				strcat_s(Str2, sizeof(Str2), Buffer);
 #else
 				strcat(Str2, Buffer);
 #endif
 				if (strlen(Str2) >= Size - 1)return;
 			}
 		}
+#if defined(_MSC_VER)
+		strcpy_s(Str, Size, Str2);
+#else
+		strcpy(Str, Str2);
+#endif
+	}
+	void EraseChar(char* Str, size_t Size, const char* EraceStr)
+	{
+		if (strlen(EraceStr) == 0)return;
+		char Buffer[16]{}, Str2[Extensions::BufferSize]{};
+		size_t sl = strlen(Str);
+
+		for (size_t Count{}; Count < strlen(Str);)
+		{
+			Extensions::StrClear(Buffer, sizeof(Buffer));
+			if (Extensions::IsDBCS(Str[Count]) == false)
+			{
+				for (size_t BCount{}; BCount < SINGLEBYTE; BCount++) { Buffer[BCount] = Str[Count + BCount]; };
+				Buffer[SINGLEBYTE] = '\0';
+				Count += SINGLEBYTE;
+			}
+			else {
+				for (size_t BCount{}; BCount < MULTIBYTE; BCount++) { Buffer[BCount] = Str[Count + BCount]; };
+				Buffer[MULTIBYTE] = '\0';
+				Count += MULTIBYTE;
+			}
+			if (strspn(Buffer, EraceStr) < strlen(Buffer))
+			{
+#if defined(_MSC_VER)
+				strcat_s(Str2, sizeof(Str2), Buffer);
+#else
+				strcat(Str2, Buffer);
+#endif
+				if (strlen(Str2) >= Size - 1)return;
+			}
+		}
+#if defined(_MSC_VER)
+		strcpy_s(Str, Size, Str2);
+#else
+		strcpy(Str, Str2);
+#endif
 	}
 	size_t MBStrlen(const char* Str)
 	{
@@ -179,6 +221,59 @@ namespace Extensions
 			}
 		}
 		Buffer[strlen(Buffer)] = '\0';
+		return;
+	}
+	void StrInsert(char* Buffer, size_t Size, const char* InsertStr,  size_t Position)
+	{
+		if (Position > strlen(Buffer))return;
+		char Save[Extensions::BufferSize]{};
+		for (size_t Count = Position; Count - Position < strlen(Buffer); Count++)
+		{
+			Save[Count - Position] = Buffer[Count];
+		}
+		Save[strlen(Save)] = '\0';
+		for (size_t Count = Position; Count - Position < strlen(InsertStr) && Count < Size - 1; Count++)
+		{
+			Buffer[Count] = InsertStr[Count - Position];
+		}
+		for (size_t Count = Position + strlen(InsertStr); Count < Size - 1; Count++)
+		{
+			Buffer[Count] = Save[Count - (Position + strlen(InsertStr))];
+		}
+		Buffer[strlen(Buffer)] = '\0';
+	}
+	void StrInsert(char* Buffer, size_t Size, char InsertChar, size_t Position)
+	{
+		if (Position > strlen(Buffer))return;
+		char Save[Extensions::BufferSize]{};
+		for (size_t Count = Position; Count - Position < strlen(Buffer); Count++)
+		{
+			Save[Count - Position] = Buffer[Count];
+		}
+		Save[strlen(Save)] = '\0';
+		Buffer[Position] = InsertChar;
+		for (size_t Count = Position + 1; Count < Size - 1; Count++)
+		{
+			Buffer[Count] = Save[Count - (Position + 1)];
+		}
+		Buffer[strlen(Buffer)] = '\0';
+	}
+	void StrErase(char* Buffer, size_t Size, size_t Start, size_t Num)
+	{
+		size_t sl = strlen(Buffer);
+		if (Start >= sl)return;
+		for (size_t Count{}, Count2{}; Count < sl; Count++)
+		{
+			if (Count < Start || Count >= Start + Num)
+			{
+				Buffer[Count - Count2] = Buffer[Count];
+			}
+			else Count2++;
+		}
+		for (size_t Count{}; Count < sl; Count++)
+		{
+			if (Count >= sl - Num)Buffer[Count] = '\0';
+		}
 		return;
 	}
 	void ToUpper(char* Buffer, size_t Size)
@@ -267,5 +362,51 @@ namespace Extensions
 			
 		}
 		return Extensions::npos;
+	}
+	size_t StrSplit(char* Buffer, size_t Size, const char* Src, char Del, size_t Position)
+	{
+		size_t Return{};
+		char Get[Extensions::BufferSize]{};
+		for (size_t Count{}, Count2{}; Count < strlen(Src);)
+		{
+			if (Extensions::IsDBCS(Src[Count]) == false)
+			{
+				if (Src[Count] != Del)
+				{
+					for (Count2 = 0; Count2 < SINGLEBYTE; Count2++) { Get[strlen(Get)] = Src[Count + Count2]; }
+					Count += SINGLEBYTE;
+				}
+				else {
+					if (Return == Position)
+					{
+#if defined(_MSC_VER)
+						strcpy_s(Buffer, Size, Get);
+#else
+						strcpy(Buffer, Get);
+#endif
+					}
+					Return++;
+					Extensions::StrClear(Get, sizeof(Get));
+					Count += SINGLEBYTE;
+				}
+			}
+			else {
+				for (size_t Count2{}; Count2 < MULTIBYTE; Count2++) { Get[strlen(Get)] = Src[Count + Count2]; }
+				Count += MULTIBYTE;
+			}
+		}
+		if (strlen(Get) > 0)
+		{
+			if (Return == Position)
+			{
+#if defined(_MSC_VER)
+				strcpy_s(Buffer, Size, Get);
+#else
+				strcpy(Buffer, Get);
+#endif
+			}
+			Return++;
+		}
+		return Return;
 	}
 }
