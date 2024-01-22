@@ -8,19 +8,18 @@
 #	include	<future>
 #endif
 
-#	define	SINGLEBYTE	strlen("0")
-#	define	MULTIBYTE	strlen("‚O")
+#if defined(_MBCS)
 
-#if defined(_MSC_VER)
-#	define	STRICMP		_stricmp
-#else
-#	define	STRICMP		stricmp
 #endif
+
+#	define	SINGLEBYTE	1
+#	define	MULTIBYTE	strlen("‚O")
 
 #	include <string.h>
 #	include <stdio.h>
 #	include <stdlib.h>
 #	include <ctype.h>
+
 
 namespace Extensions
 {
@@ -42,9 +41,11 @@ namespace Extensions
 	void StrErase(char* Buffer, size_t Size, size_t Start, size_t Num);
 	void ToUpper(char* Buffer, size_t Size);
 	void ToLower(char* Buffer, size_t Size);
+	int StrCaseCmp(const char* Str1, const char* Str2);
 	void SwapCase(char* Buffer, size_t Size);
 	size_t StrFind(const char* Src, const char* Find);
 	size_t StrCaseFind(const char* Src, const char* Find, size_t Find_Size);
+	size_t CharCount(const char* Str, char CountChar);
 	size_t StrSplit(char* Buffer, size_t Size, const char* Src, char Del, size_t Position);
 	template <typename Type>Type ToValue(const char* Value);
 }//namespace Extensions

@@ -9,7 +9,7 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 	std::vector<Type>GetValue;
 	std::vector<short>GetSymbol;
 	std::vector<bool>MinusCheck;
-
+	std::vector<size_t>MinusCount;
 #if defined(_MSC_VER)
 	strcpy_s(_Formula, sizeof(_Formula), Formula);
 #else
@@ -39,10 +39,12 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 					if (GetValue.size() == 0)
 					{
 						GetValue.push_back(Extensions::ToValue<Type>(_Value));
+						MinusCount.push_back(Extensions::CharCount(_Value, '-'));
 						GetSymbol.push_back(-1);
 					}
 					else {
 						GetValue.push_back(Extensions::ToValue<Type>(&_Value[1]));
+						MinusCount.push_back(Extensions::CharCount(&_Value[1], '-'));
 						if (_Value[0] == '+')GetSymbol.push_back(0);
 						else if (_Value[0] == '-')GetSymbol.push_back(1);
 						else if (_Value[0] == '*')GetSymbol.push_back(2);
@@ -76,10 +78,12 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 						if (GetValue.size() == 0)
 						{
 							GetValue.push_back(Extensions::ToValue<Type>(_Value));
+							MinusCount.push_back(Extensions::CharCount(_Value, '-'));
 							GetSymbol.push_back(-1);
 						}
 						else {
 							GetValue.push_back(Extensions::ToValue<Type>(&_Value[1]));
+							MinusCount.push_back(Extensions::CharCount(&_Value[1], '-'));
 							if (_Value[0] == '+')GetSymbol.push_back(0);
 							else if (_Value[0] == '-')GetSymbol.push_back(1);
 							else if (_Value[0] == '*')GetSymbol.push_back(2);
@@ -136,10 +140,12 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 		if (GetValue.size() == 0)
 		{
 			GetValue.push_back(Extensions::ToValue<Type>(_Value));
+			MinusCount.push_back(Extensions::CharCount(_Value, '-'));
 			GetSymbol.push_back(-1);
 		}
 		else {
 			GetValue.push_back(Extensions::ToValue<Type>(&_Value[1]));
+			MinusCount.push_back(Extensions::CharCount(&_Value[1], '-'));
 			if (_Value[0] == '+')GetSymbol.push_back(0);
 			else if (_Value[0] == '-')GetSymbol.push_back(1);
 			else if (_Value[0] == '*')GetSymbol.push_back(2);
@@ -155,14 +161,25 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 
 		if (GetSymbol[Count] == 5)
 		{
-			if (GetValue[Count - 1] >= 0)GetValue[Count - 1] = pow(GetValue[Count - 1], GetValue[Count]);
-			else {
-				if (MinusCheck[Count - 1] == false)GetValue[Count - 1] = -pow(abs(GetValue[Count - 1]), GetValue[Count]);
-				else GetValue[Count - 1] = pow(GetValue[Count - 1], GetValue[Count]);
+			if (MinusCheck[Count - 1] == false)
+			{
+				if (GetValue[Count - 1] >= 0)GetValue[Count - 1] = pow(abs(GetValue[Count - 1]), GetValue[Count]);
+				else GetValue[Count - 1] = -pow(abs(GetValue[Count - 1]), GetValue[Count]);
 			}
+			else {
+				if (GetValue[Count - 1] >= 0)
+				{
+					GetValue[Count - 1] = -pow(abs(GetValue[Count - 1]), GetValue[Count]);
+				}
+				else {
+					GetValue[Count - 1] = pow(abs(GetValue[Count - 1]), GetValue[Count]);
+				}
+			}
+
 			GetValue.erase(GetValue.begin() + Count);
 			GetSymbol.erase(GetSymbol.begin() + Count);
 			MinusCheck.erase(MinusCheck.begin() + Count);
+			MinusCount.erase(MinusCount.begin() + Count);
 			Count = GetValue.size() - 1;
 			continue;
 		}
@@ -178,6 +195,7 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 			GetValue.erase(GetValue.begin() + Count);
 			GetSymbol.erase(GetSymbol.begin() + Count);
 			MinusCheck.erase(MinusCheck.begin() + Count);
+			MinusCount.erase(MinusCount.begin() + Count);
 			Count = 0;
 			continue;
 		}
@@ -191,6 +209,7 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 			GetValue.erase(GetValue.begin() + Count);
 			GetSymbol.erase(GetSymbol.begin() + Count);
 			MinusCheck.erase(MinusCheck.begin() + Count);
+			MinusCount.erase(MinusCount.begin() + Count);
 			Count = 0;
 			continue;
 		}
@@ -254,8 +273,8 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 				//printf("(%s)\tStr:%s\n", Process, Func);
 				Result = 0;
 				//Func
-				if (STRICMP(Func, "abs") == 0)Result = abs(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "avg") == 0)
+				if (Extensions::StrCaseCmp(Func, "abs") == 0)Result = abs(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "avg") == 0)
 				{
 					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
 					for (size_t CCount{}; CCount < CNum; CCount++)
@@ -266,10 +285,10 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 					if (CNum == 0)Result = Type(0.0);
 					else Result /= CNum;
 				}
-				else if (STRICMP(Func, "ceil") == 0)Result = ceil(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "exp") == 0)Result = exp(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "floor") == 0)Result = floor(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "hypot") == 0)
+				else if (Extensions::StrCaseCmp(Func, "ceil") == 0)Result = ceil(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "exp") == 0)Result = exp(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "floor") == 0)Result = floor(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "hypot") == 0)
 				{
 					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
 					if (CNum < 2)Result = Type(0.0);
@@ -279,8 +298,8 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 						Result = hypot(ContentResult[0], Extensions::EasyEval<Type>(Content));
 					}
 				}
-				else if (STRICMP(Func, "ln") == 0)Result = log(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "log") == 0)
+				else if (Extensions::StrCaseCmp(Func, "ln") == 0)Result = log(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "log") == 0)
 				{
 					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
 					if (CNum == 0)Result = Type(0.0);
@@ -291,8 +310,8 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 						Result = log(Extensions::EasyEval<Type>(Content)) / log(ContentResult[0]);
 					}
 				}
-				else if (STRICMP(Func, "log10") == 0)Result = log10(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "pow") == 0)
+				else if (Extensions::StrCaseCmp(Func, "log10") == 0)Result = log10(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "pow") == 0)
 				{
 					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
 					if (CNum < 2)Result = Type(0.0);
@@ -302,8 +321,8 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 						Result = pow(ContentResult[0], Extensions::EasyEval<Type>(Content));
 					}
 				}
-				else if (STRICMP(Func, "sqrt") == 0)Result = sqrt(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "sum") == 0)
+				else if (Extensions::StrCaseCmp(Func, "sqrt") == 0)Result = sqrt(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "sum") == 0)
 				{
 					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
 					for (size_t CCount{}; CCount < CNum; CCount++)
@@ -313,10 +332,10 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 					}
 					if (CNum == 0)Result = Type(0.0);
 				}
-				else if (STRICMP(Func, "acos") == 0)Result = acos(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "asin") == 0)Result = asin(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "atan") == 0)Result = atan(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "atan2") == 0)
+				else if (Extensions::StrCaseCmp(Func, "acos") == 0)Result = acos(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "asin") == 0)Result = asin(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "atan") == 0)Result = atan(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "atan2") == 0)
 				{
 					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
 					if (CNum < 2)Result = Type(0.0);
@@ -326,12 +345,12 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 						Result = atan2(ContentResult[0], Extensions::EasyEval<Type>(Content));
 					}
 				}
-				else if (STRICMP(Func, "cos") == 0)Result = cos(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "cosh") == 0)Result = cosh(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "sin") == 0)Result = sin(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "sinh") == 0)Result = sinh(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "tan") == 0)Result = tan(Extensions::EasyEval<Type>(Process));
-				else if (STRICMP(Func, "tanh") == 0)Result = tanh(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "cos") == 0)Result = cos(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "cosh") == 0)Result = cosh(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "sin") == 0)Result = sin(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "sinh") == 0)Result = sinh(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "tan") == 0)Result = tan(Extensions::EasyEval<Type>(Process));
+				else if (Extensions::StrCaseCmp(Func, "tanh") == 0)Result = tanh(Extensions::EasyEval<Type>(Process));
 				else Result = Extensions::EasyEval<Type>(Process);
 				std::stringstream sResult{};
 				sResult << std::setprecision(SetPrecision) << Result;

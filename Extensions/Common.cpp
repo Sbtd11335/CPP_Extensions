@@ -302,6 +302,20 @@ namespace Extensions
 		}
 		return;
 	}
+	int StrCaseCmp(const char* Str1, const char* Str2)
+	{
+		char Bf[2][Extensions::BufferSize]{};
+#if defined(_MSC_VER)
+		strcpy_s(Bf[0], sizeof(Bf[0]), Str1);
+		strcpy_s(Bf[1], sizeof(Bf[1]), Str2);
+#else
+		strcpy(Bf[0], Str1);
+		strcpy(Bf[1], Str2); 
+#endif
+		ToLower(Bf[0], sizeof(Bf[0]));
+		ToLower(Bf[1], sizeof(Bf[1]));
+		return strcmp(Bf[0], Bf[1]);
+	}
 	void SwapCase(char* Buffer, size_t Size)
 	{
 		for (size_t Count{}; Count < strlen(Buffer);)
@@ -341,8 +355,13 @@ namespace Extensions
 		char Buffer[Extensions::BufferSize]{};
 		char LSrc[Extensions::BufferSize]{};
 		char LFind[Extensions::BufferSize]{};
+#if defined(_MSC_VER)
 		strcpy_s(LSrc, sizeof(LSrc), Src);
 		strcpy_s(LFind, sizeof(LFind), Find);
+#else
+		strcpy(LSrc, Src);
+		strcpy(LFind, Find);
+#endif
 		ToLower(LSrc, sizeof(LSrc));
 		ToLower(LFind, Find_Size);
 		for (size_t Count{}; Count < strlen(LSrc);)
@@ -362,6 +381,20 @@ namespace Extensions
 			
 		}
 		return Extensions::npos;
+	}
+	size_t CharCount(const char* Str, char CountChar)
+	{
+		size_t Return{};
+		for (size_t Count{}; Count < strlen(Str);)
+		{
+			if (Extensions::IsDBCS(Str[Count]) == false)
+			{
+				if (Str[Count] == CountChar)Return++;
+				Count += SINGLEBYTE;
+			}
+			else Count += MULTIBYTE;
+		}
+		return Return;
 	}
 	size_t StrSplit(char* Buffer, size_t Size, const char* Src, char Del, size_t Position)
 	{
