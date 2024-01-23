@@ -354,7 +354,7 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 				else Result = Extensions::EasyEval<Type>(Process);
 				std::stringstream sResult{};
 				sResult << std::setprecision(SetPrecision) << Result;
-				printf("Debug:%s\n", sResult.str().c_str());
+				//printf("Debug:%s\n", sResult.str().c_str());
 				if (Result >= 0)Extensions::StrInsert(_Formula, sizeof(_Formula), sResult.str().c_str(), Count - strlen(Process) - 1 - strlen(Func));
 				else {
 #if defined(_MSC_VER)
