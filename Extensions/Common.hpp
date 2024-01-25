@@ -6,20 +6,23 @@
 #if __has_include(<thread>)
 #	define	EXTENSIONS_THREAD_INCLUDED
 #	include	<future>
+#	include <mutex>
 #endif
 
 #if defined(_MBCS)
 
 #endif
 
+#	ifndef MULTIBYTE_SPACE
+#		define	MULTIBYTE_SPACE "Å@"
+#	endif
 #	define	SINGLEBYTE	1
-#	define	MULTIBYTE	strlen("ÇO")
+#	define	MULTIBYTE	strlen(MULTIBYTE_SPACE)
 
 #	include <string.h>
 #	include <stdio.h>
 #	include <stdlib.h>
 #	include <ctype.h>
-
 
 namespace Extensions
 {

@@ -167,21 +167,15 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 				else GetValue[Count - 1] = -pow(abs(GetValue[Count - 1]), GetValue[Count]);
 			}
 			else {
-				if (GetValue[Count - 1] >= 0)
-				{
-					GetValue[Count - 1] = -pow(abs(GetValue[Count - 1]), GetValue[Count]);
-				}
-				else {
-					GetValue[Count - 1] = pow(abs(GetValue[Count - 1]), GetValue[Count]);
-				}
+				if (MinusCount[Count - 1] % 2 == 0)GetValue[Count - 1] = -pow(-abs(GetValue[Count - 1]), GetValue[Count]);
+				else GetValue[Count - 1] = pow(-abs(GetValue[Count - 1]), GetValue[Count]);
 			}
 
 			GetValue.erase(GetValue.begin() + Count);
 			GetSymbol.erase(GetSymbol.begin() + Count);
 			MinusCheck.erase(MinusCheck.begin() + Count);
 			MinusCount.erase(MinusCount.begin() + Count);
-			Count = GetValue.size() - 1;
-			continue;
+			Count = GetValue.size();
 		}
 	}
 	for (size_t Count = 0; Count < GetValue.size(); Count++)
@@ -218,19 +212,17 @@ template<typename Type>Type Extensions::EasyEval(const char* Formula)
 	return Type(0.0);
 }
 
-//Extensions::SimpleEval
 template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t SetPrecision)
 {
-	if (Extensions::FindDBCS(Formula) != Extensions::npos)return Type(0.0);
-	char _Formula[Extensions::BufferSize]{}, Process[Extensions::BufferSize]{}, Process2[Extensions::BufferSize]{}, Str[Extensions::BufferSize]{}, Func[Extensions::BufferSize]{}, Content[Extensions::BufferSize]{};
-	size_t BCount{}, CNum{};
-	Type Result{}, ContentResult[Extensions::BufferSize]{};
-	bool BCheck{};
-	bool BoostCheck{};
-	//boost
-#ifdef EXTENSIONS_BOOST_INCLUDED
-	if (Extensions::StrCaseFind(typeid(Result).name(), "Boost", sizeof("Boost")))BoostCheck = true;
-#endif
+	if (Extensions::FindDBCS(Formula) != Extensions::npos || Extensions::CharCount(Formula, '(') != Extensions::CharCount(Formula, ')'))return Type(0.0);
+	if (Extensions::IsValue(Formula))return Extensions::ToValue<Type>(Formula);
+	char _Formula[Extensions::BufferSize]{}, GetFormula[Extensions::BufferSize]{}, GetFunc[Extensions::BufferSize]{}, Func[Extensions::BufferSize]{};
+	Type Result{};
+	std::vector<std::string>Formulas, Functions;
+	std::vector<size_t>Position;
+	size_t BCount{}, BPosition{};
+	int Position_Plus{};
+
 #if defined(_MSC_VER)
 	strcpy_s(_Formula, sizeof(_Formula), Formula);
 #else
@@ -238,145 +230,271 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 #endif
 	Extensions::EraseSpace(_Formula, sizeof(_Formula));
 	if (strlen(_Formula) == 0)return Type(0.0);
-	Extensions::StrInsert(_Formula, sizeof(_Formula), "(", 0);
-	Extensions::StrInsert(_Formula, sizeof(_Formula), ")", strlen(_Formula));
+	if (Extensions::IsValue(_Formula))return Extensions::ToValue<Type>(_Formula);
+	Type* FuncResult = new Type[Extensions::BufferSize]{};
 
-	while(true)
+	while (true)
 	{
-		Extensions::StrClear(Process, sizeof(Process));
-		Extensions::StrClear(Str, sizeof(Str));
 		BCount = 0;
-		for (size_t Count{}, Count2{}; Count < strlen(_Formula); Count++)
+		BPosition = Extensions::npos;
+		Extensions::StrClear(GetFormula, sizeof(GetFormula));
+		Extensions::StrClear(GetFunc, sizeof(GetFunc));
+		Extensions::StrClear(Func, sizeof(Func));
+		for (size_t Count{}, FCount{}, SCount{}; Count < strlen(_Formula); Count++)
 		{
 			if (_Formula[Count] == '(')
 			{
-
 #if defined(_MSC_VER)
-				strcpy_s(Str, sizeof(Str), Process);
+				strcpy_s(Func, sizeof(Func), GetFunc);
 #else
-				strcpy(Str, Process);
+				strcpy(Func, GetFunc);
 #endif
-				Extensions::StrClear(Process, sizeof(Process));
+				Extensions::StrClear(GetFunc, sizeof(GetFunc));
+				Extensions::StrClear(GetFormula, sizeof(GetFormula));
+				SCount = 0;
+				FCount = 0;
+				BPosition = Count;
 				BCount++;
-				Count2 = 0;
+				continue;
 			}
-			else if (_Formula[Count] == ')') {
-				//printf("Debug:F:%s\t%zd, %zd\t", _Formula, Count - strlen(Process) - 1, strlen(Process) + 2);
-				//Calc
+			else if (_Formula[Count] == ')')
+			{
+				if (BPosition != Extensions::npos)
+				{
+					//Save
+					Formulas.push_back(std::string(GetFormula));
+					Functions.push_back(std::string(Func));
+					Position.push_back(BPosition - strlen(Func));
+					BPosition = Extensions::npos;
+				}
+				Extensions::StrClear(GetFormula, sizeof(GetFormula));
+				Extensions::StrClear(GetFunc, sizeof(GetFunc));
 				Extensions::StrClear(Func, sizeof(Func));
-				for (size_t SCount = strlen(Str) - 1; SCount >= 0 && SCount != Extensions::npos; SCount--)
-				{
-					if (SCount == Extensions::npos || Str[SCount] == '+' || Str[SCount] == '-' || Str[SCount] == '*' || Str[SCount] == '/' || Str[SCount] == '%' || Str[SCount] == '^' || Str[SCount] == '.' || Str[SCount] == ',' || Str[SCount] == '\\')break;
-					Extensions::StrInsert(Func, sizeof(Func), Str[SCount], 0);
-				}
-				Extensions::StrErase(_Formula, sizeof(_Formula), Count - strlen(Process) - 1 - strlen(Func), strlen(Process) + 2 + strlen(Func));
-				//printf("(%s)\tStr:%s\n", Process, Func);
-				Result = 0;
-				//Func
-				if (Extensions::StrCaseCmp(Func, "abs") == 0)Result = abs(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "avg") == 0)
-				{
-					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
-					for (size_t CCount{}; CCount < CNum; CCount++)
-					{
-						if (CCount > 0)(void)Extensions::StrSplit(Content, sizeof(Content), Process, ',', CCount);
-						Result += Extensions::SimpleEval<Type>(Content);
-					}
-					if (CNum == 0)Result = Type(0.0);
-					else Result /= CNum;
-				}
-				else if (Extensions::StrCaseCmp(Func, "ceil") == 0)Result = ceil(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "exp") == 0)Result = exp(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "floor") == 0)Result = floor(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "hypot") == 0)
-				{
-					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
-					if (CNum < 2)Result = Type(0.0);
-					else {
-						ContentResult[0] = Extensions::EasyEval<Type>(Content);
-						(void)Extensions::StrSplit(Content, sizeof(Content), Process, ',', 1);
-						Result = hypot(ContentResult[0], Extensions::EasyEval<Type>(Content));
-					}
-				}
-				else if (Extensions::StrCaseCmp(Func, "ln") == 0)Result = log(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "log") == 0)
-				{
-					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
-					if (CNum == 0)Result = Type(0.0);
-					else if (CNum == 1)Result = log(Extensions::EasyEval<Type>(Process));
-					else {
-						ContentResult[0] = Extensions::EasyEval<Type>(Content);
-						(void)Extensions::StrSplit(Content, sizeof(Content), Process, ',', 1);
-						Result = log(Extensions::EasyEval<Type>(Content)) / log(ContentResult[0]);
-					}
-				}
-				else if (Extensions::StrCaseCmp(Func, "log10") == 0)Result = log10(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "pow") == 0)
-				{
-					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
-					if (CNum < 2)Result = Type(0.0);
-					else {
-						ContentResult[0] = Extensions::EasyEval<Type>(Content);
-						(void)Extensions::StrSplit(Content, sizeof(Content), Process, ',', 1);
-						Result = pow(ContentResult[0], Extensions::EasyEval<Type>(Content));
-					}
-				}
-				else if (Extensions::StrCaseCmp(Func, "sqrt") == 0)Result = sqrt(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "sum") == 0)
-				{
-					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
-					for (size_t CCount{}; CCount < CNum; CCount++)
-					{
-						if (CCount > 0)(void)Extensions::StrSplit(Content, sizeof(Content), Process, ',', CCount);
-						Result += Extensions::SimpleEval<Type>(Content);
-					}
-					if (CNum == 0)Result = Type(0.0);
-				}
-				else if (Extensions::StrCaseCmp(Func, "acos") == 0)Result = acos(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "asin") == 0)Result = asin(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "atan") == 0)Result = atan(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "atan2") == 0)
-				{
-					CNum = Extensions::StrSplit(Content, sizeof(Content), Process, ',', 0);
-					if (CNum < 2)Result = Type(0.0);
-					else {
-						ContentResult[0] = Extensions::EasyEval<Type>(Content);
-						(void)Extensions::StrSplit(Content, sizeof(Content), Process, ',', 1);
-						Result = atan2(ContentResult[0], Extensions::EasyEval<Type>(Content));
-					}
-				}
-				else if (Extensions::StrCaseCmp(Func, "cos") == 0)Result = cos(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "cosh") == 0)Result = cosh(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "sin") == 0)Result = sin(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "sinh") == 0)Result = sinh(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "tan") == 0)Result = tan(Extensions::EasyEval<Type>(Process));
-				else if (Extensions::StrCaseCmp(Func, "tanh") == 0)Result = tanh(Extensions::EasyEval<Type>(Process));
-				else Result = Extensions::EasyEval<Type>(Process);
-				std::stringstream sResult{};
-				sResult << std::setprecision(SetPrecision) << Result;
-				//printf("Debug:%s\n", sResult.str().c_str());
-				if (Result >= 0)Extensions::StrInsert(_Formula, sizeof(_Formula), sResult.str().c_str(), Count - strlen(Process) - 1 - strlen(Func));
-				else {
-#if defined(_MSC_VER)
-					sprintf_s(Content, sizeof(Content), "%s\\", sResult.str().c_str());
-#else
-					sprintf(Content, "%s\\", sResult.str().c_str());
-#endif
-					Extensions::StrInsert(_Formula, sizeof(_Formula), Content, Count - strlen(Process) - 1 - strlen(Func));
-				}
-
-				Extensions::StrClear(Process, sizeof(Process));
-				Extensions::StrClear(Str, sizeof(Str));
-				Count = 0;
-				Count2 = 0;
-				break;
+				SCount = 0;
+				FCount = 0;
+				continue;
 			}
 			else {
-				Process[Count2] = _Formula[Count];
-				Count2++;
+				GetFunc[FCount++] = _Formula[Count];
+				GetFormula[SCount++] = _Formula[Count];
+			}
+
+			if (_Formula[Count] == '+' || _Formula[Count] == '-' || _Formula[Count] == '*' || _Formula[Count] == '/' || _Formula[Count] == '%' || _Formula[Count] == '^' || _Formula[Count] == '.' || _Formula[Count] == ',' || _Formula[Count] == '\\')
+			{
+				Extensions::StrClear(GetFunc, sizeof(GetFunc));
+				FCount = 0;
 			}
 		}
-		if (BCount <= 1)break;
+		//Calculation
+		if (Formulas.size() > 0)
+		{
+			Position_Plus = 0;
+			for (size_t Count{}; Count < Formulas.size(); Count++)
+			{
+				if (Functions[Count].length() > 0)
+				{
+					Extensions::StrErase(_Formula, sizeof(_Formula), Position[Count] + Position_Plus, Functions[Count].length() + Formulas[Count].length() + 2);
+					//Function
+					if (Extensions::StrCaseCmp(Functions[Count].c_str(), "abs") == 0)Result = abs(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "avg") == 0)
+					{
+						BPosition = Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 0);
+						Result = 0;
+						for (size_t CCount{}; CCount < BPosition; CCount++)
+						{
+							if (CCount > 0)(void)Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', CCount);
+							Result += Extensions::SimpleEval<Type>(Func);
+						}
+						if (BPosition == 0)Result = Type(0.0);
+						else Result /= BPosition;
+					}
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "ceil") == 0)Result = ceil(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "exp") == 0)Result = exp(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "floor") == 0)Result = floor(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "hypot") == 0)
+					{
+						BPosition = Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 0);
+						Result = 0;
+						if (BPosition < 2)Result = Type(0.0);
+						else {
+							FuncResult[0] = Extensions::EasyEval<Type>(Func);
+							(void)Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 1);
+							Result = hypot(FuncResult[0], Extensions::EasyEval<Type>(Func));
+						}
+					}
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "ln") == 0)Result = log(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "log") == 0)
+					{
+						BPosition = Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 0);
+						Result = 0;
+						if (BPosition == 0)Result = Type(0.0);
+						else if (BPosition == 1)Result = log(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+						else {
+							FuncResult[0] = Extensions::EasyEval<Type>(Func);
+							(void)Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 1);
+							Result = log(Extensions::EasyEval<Type>(Func)) / log(FuncResult[0]);
+						}
+					}
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "log10") == 0)Result = log10(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "pow") == 0)
+					{
+						BPosition = Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 0);
+						Result = 0;
+						if (BPosition < 2)Result = Type(0.0);
+						else {
+							FuncResult[0] = Extensions::EasyEval<Type>(Func);
+							(void)Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 1);
+							Result = pow(FuncResult[0], Extensions::EasyEval<Type>(Func));
+						}
+					}
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "sqrt") == 0)Result = sqrt(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "sum") == 0)
+					{
+						BPosition = Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 0);
+						Result = 0;
+						for (size_t CCount{}; CCount < BPosition; CCount++)
+						{
+							if (CCount > 0)(void)Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', CCount);
+							Result += Extensions::SimpleEval<Type>(Func);
+						}
+						if (BPosition == 0)Result = Type(0.0);
+					}
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "acos") == 0)Result = acos(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "asin") == 0)Result = asin(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "atan") == 0)Result = atan(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "atan2") == 0)
+					{
+						BPosition = Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 0);
+						Result = 0;
+						if (BPosition < 2)Result = Type(0.0);
+						else {
+							FuncResult[0] = Extensions::EasyEval<Type>(Func);
+							(void)Extensions::StrSplit(Func, sizeof(Func), Formulas[Count].c_str(), ',', 1);
+							Result = atan2(FuncResult[0], Extensions::EasyEval<Type>(Func));
+						}
+					}
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "cos") == 0)Result = cos(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "cosh") == 0)Result = cosh(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "sin") == 0)Result = sin(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "sinh") == 0)Result = sinh(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "tan") == 0)Result = tan(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "tanh") == 0)Result = tanh(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+					else Result = Extensions::EasyEval<Type>(Formulas[Count].c_str());
+				}
+				else {
+					Extensions::StrErase(_Formula, sizeof(_Formula), Position[Count] + Position_Plus, Formulas[Count].length() + 2);
+					Result = Extensions::EasyEval<Type>(Formulas[Count].c_str());
+				}
+				std::stringstream sResult{};
+				sResult << std::setprecision(SetPrecision) << Result;
+				
+				if (Result >= 0)
+				{
+					Extensions::StrInsert(_Formula, sizeof(_Formula), sResult.str().c_str(), Position[Count] + Position_Plus);
+					if (Functions[Count].length() == 0)Position_Plus += sResult.str().length() - Formulas[Count].length() - 2;
+					else Position_Plus += sResult.str().length() - Functions[Count].length() - Formulas[Count].length() - 2;
+
+				}
+				else {
+#if defined(_MSC_VER)
+					sprintf_s(GetFunc, sizeof(GetFunc), "%s\\", sResult.str().c_str());
+#else
+					sprintf(GetFunc, "%s\\", sResult.str().c_str());
+#endif
+					Extensions::StrInsert(_Formula, sizeof(_Formula), GetFunc, Position[Count] + Position_Plus);
+					if (Functions[Count].length() == 0)Position_Plus += sResult.str().length() - Formulas[Count].length() - 1;
+					else Position_Plus += sResult.str().length() - Functions[Count].length() - Formulas[Count].length() + 1;
+				}
+			}
+			BCount -= Formulas.size();
+			if (BCount > 0)
+			{
+				Formulas.clear(); Formulas.shrink_to_fit();
+				Functions.clear(); Functions.shrink_to_fit();
+				Position.clear(); Position.shrink_to_fit();
+			}
+		}
+		
+		if (BCount <= 0)break;
 	}
-	return Type(Result);
+	delete[]FuncResult;
+
+	return Extensions::EasyEval<Type>(_Formula);
+}
+
+//class Eval
+template<typename Type>Extensions::Eval<Type>::Eval()
+{
+	Extensions::Eval<Type>::AppendConstant("\\PI", "3.141592653589793238462643");
+	Extensions::Eval<Type>::AppendConstant("e", "2.718281828459045235360287");
+	return;
+}
+template<typename Type>size_t Extensions::Eval<Type>::FindConstantByName(const char* Name)
+{
+	for (size_t Count{}; Count < ConstantNames.size(); Count++)
+	{
+		if (ConstantNames[Count][0] == '\\')
+		{
+			if (Extensions::StrCaseCmp(Name, &ConstantNames[Count][1]) == 0)return Count;
+		}
+		else {
+			if (strcmp(Name, ConstantNames[Count]) == 0)return Count;
+		}
+	}
+	return Extensions::npos;
+}
+template<typename Type>size_t Extensions::Eval<Type>::FindVariableByName(const char* Name)
+{
+	for (size_t Count{}; Count < VariableNames.size(); Count++)
+	{
+		if (VariableNames[Count][0] == '\\')
+		{
+			if (Extensions::StrCaseCmp(Name, &VariableNames[Count][1]) == 0)return Count;
+		}
+		else {
+			if (strcmp(Name, VariableNames[Count]) == 0)return Count;
+		}
+	}
+	return Extensions::npos;
+}
+template<typename Type>Type Extensions::Eval<Type>::GetConstantValueByName(const char* Name)
+{
+	for (size_t Count{}; Count < ConstantNames.size(); Count++)
+	{
+		if (ConstantNames[Count][0] == '\\')
+		{
+			if (Extensions::StrCaseCmp(Name, &ConstantNames[Count][1]) == 0)return ConstantValues[Count];
+		}
+		else {
+			if (strcmp(Name, ConstantNames[Count]) == 0)return ConstantValues[Count];
+		}
+	}
+	return Extensions::npos;
+}
+template<typename Type>Type Extensions::Eval<Type>::GetVariableValueByName(const char* Name)
+{
+	for (size_t Count{}; Count < VariableNames.size(); Count++)
+	{
+		if (VariableNames[Count][0] == '\\')
+		{
+			if (Extensions::StrCaseCmp(Name, &VariableNames[Count][1]) == 0)return VariableValues[Count];
+		}
+		else {
+			if (strcmp(Name, VariableNames[Count]) == 0)return VariableValues[Count];
+		}
+	}
+	return Extensions::npos;
+}
+
+template<typename Type>size_t Extensions::Eval<Type>::AppendConstant(const char* Name, Type Value)
+{
+	if (FindConstantByName(Name) != Extensions::npos || FindVariableByName(Name) != Extensions::npos)return Extensions::npos;
+	ConstantNames.push_back(Name);
+	ConstantValues.push_back(Value);
+	return ConstantNames.size() - 1;
+}
+template<typename Type>size_t Extensions::Eval<Type>::AppendConstant(const char* Name, char* Value)
+{
+
+	return ConstantNames.size() - 1;
 }

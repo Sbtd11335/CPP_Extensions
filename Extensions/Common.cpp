@@ -121,7 +121,7 @@ namespace Extensions
 				Buffer[MULTIBYTE] = '\0';
 				Count += MULTIBYTE;
 			}
-			if (strcmp(Buffer, " ") != 0 && strcmp(Buffer, "Å@") != 0)
+			if (strcmp(Buffer, " ") != 0 && strcmp(Buffer, MULTIBYTE_SPACE) != 0)
 			{
 #if defined(_MSC_VER)
 				strcat_s(Str2, sizeof(Str2), Buffer);
@@ -424,7 +424,7 @@ namespace Extensions
 				}
 			}
 			else {
-				for (size_t Count2{}; Count2 < MULTIBYTE; Count2++) { Get[strlen(Get)] = Src[Count + Count2]; }
+				for (Count2 = 0; Count2 < MULTIBYTE; Count2++) { Get[strlen(Get)] = Src[Count + Count2]; }
 				Count += MULTIBYTE;
 			}
 		}
