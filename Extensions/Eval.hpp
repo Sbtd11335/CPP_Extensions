@@ -7,6 +7,10 @@
 #	include <string>
 #	include <sstream>
 #	include <iomanip>
+#include <cmath>
+
+#include <iostream>
+#include <limits>
 
 namespace Extensions
 {

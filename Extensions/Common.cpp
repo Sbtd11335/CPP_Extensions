@@ -27,75 +27,102 @@ namespace Extensions
 	bool IsValue(const char* Value)
 	{
 		if (Extensions::FindDBCS(Value) != Extensions::npos)return false;
-		char Minus[2]{}, ExponentialMinus[2]{}, GetValue[Extensions::BufferSize]{}, GetExponentialValue[Extensions::BufferSize]{};
-		bool GetSymbol{}, GetNum{}, GetDecimalPoint{}, GetExponential{}, GetExponentialSymbol{}, GetExponentialNum{};
+		char Minus[2]{}, ExponentialMinus[2]{}, GetValue[Extensions::BufferSize]{}, GetExponentialValue[Extensions::BufferSize]{}, Str[Extensions::BufferSize]{};
+		bool GetSymbol{}, GetNum{}, GetDecimalPoint{}, GetExponential{}, GetExponentialSymbol{}, GetExponentialNum{}, GetStr{};
 		for (size_t Count{}; Count < strlen(Value); Count += SINGLEBYTE)
 		{
-			if (Value[Count] == '+')
+			if (GetStr == false)
 			{
-				if (GetExponential == false)
+				if (Value[Count] == '+')
 				{
-					if (GetNum || GetDecimalPoint)return false;
-					GetSymbol = true;
+					if (GetExponential == false)
+					{
+						if (GetNum || GetDecimalPoint)return false;
+						GetSymbol = true;
+					}
+					else {
+						if (GetExponentialNum)return false;
+						GetExponentialSymbol = true;
+					}
 				}
-				else {
-					if (GetExponentialNum)return false;
-					GetExponentialSymbol = true;
-				}
-			}
-			else if (Value[Count] == '-') {
-				if (GetExponential == false)
-				{
-					if (GetNum || GetDecimalPoint)return false;
+				else if (Value[Count] == '-') {
+					if (GetExponential == false)
+					{
+						if (GetNum || GetDecimalPoint)return false;
 #if defined(_MSC_VER)
-					if (strlen(Minus) == 0)strcpy_s(Minus, sizeof(Minus), "-");
-					else strcpy_s(Minus, sizeof(Minus), "");
+						if (strlen(Minus) == 0)strcpy_s(Minus, sizeof(Minus), "-");
+						else strcpy_s(Minus, sizeof(Minus), "");
 #else
-					if (strlen(Minus) == 0)strcpy(Minus, "-");
-					else strcpy(Minus, "");
+						if (strlen(Minus) == 0)strcpy(Minus, "-");
+						else strcpy(Minus, "");
 #endif
-					GetSymbol = true;
-				}
-				else {
-					if (GetExponentialNum)return false;
+						GetSymbol = true;
+					}
+					else {
+						if (GetExponentialNum)return false;
 #if defined(_MSC_VER)
-					if (strlen(ExponentialMinus) == 0)strcpy_s(ExponentialMinus, sizeof(ExponentialMinus), "-");
-					else strcpy_s(ExponentialMinus, sizeof(ExponentialMinus), "");
+						if (strlen(ExponentialMinus) == 0)strcpy_s(ExponentialMinus, sizeof(ExponentialMinus), "-");
+						else strcpy_s(ExponentialMinus, sizeof(ExponentialMinus), "");
 #else
-					if (strlen(ExponentialMinus) == 0)strcpy(ExponentialMinus, "-");
-					else strcpy(ExponentialMinus, "");
+						if (strlen(ExponentialMinus) == 0)strcpy(ExponentialMinus, "-");
+						else strcpy(ExponentialMinus, "");
 #endif
-					GetExponentialSymbol = true;
+						GetExponentialSymbol = true;
+					}
 				}
-			}
-			else if (Value[Count] == 'e' || Value[Count] == 'E') {
-				if (GetExponential == false)GetExponential = true;
-				else return false;
-			}
-			else if (Value[Count] == '.') {
-				if (GetExponential == false)
-				{
-					if (GetDecimalPoint)return false;
-					GetDecimalPoint = true;
-					GetValue[strlen(GetValue)] = Value[Count];
+				else if (Value[Count] == 'e' || Value[Count] == 'E') {
+					if (GetNum == false)
+					{
+						GetStr = true;
+						Str[strlen(Str)] = Value[Count];
+					}
+					else {
+						if (GetExponential == false)GetExponential = true;
+						else return false;
+					}
 				}
-				else return false;
-			}
-			else if (IsNum(Value[Count])) {
-				if (GetExponential == false)
-				{
-					GetNum = true;
-					GetValue[strlen(GetValue)] = Value[Count];
+				else if (Value[Count] == '.') {
+					if (GetExponential == false)
+					{
+						if (GetDecimalPoint)return false;
+						GetDecimalPoint = true;
+						GetValue[strlen(GetValue)] = Value[Count];
+					}
+					else return false;
+				}
+				else if (IsNum(Value[Count])) {
+					if (GetExponential == false)
+					{
+						GetNum = true;
+						GetValue[strlen(GetValue)] = Value[Count];
+					}
+					else {
+						GetExponentialNum = true;
+						GetExponentialValue[strlen(GetExponentialValue)] = Value[Count];
+					}
 				}
 				else {
-					GetExponentialNum = true;
-					GetExponentialValue[strlen(GetExponentialValue)] = Value[Count];
+					if (GetNum || GetDecimalPoint)return false;
+					GetStr = true;
+					Str[strlen(Str)] = Value[Count];
 				}
 			}
-			else return false;
+			else {
+				if (GetStr == false && Value[Count] == '+' || Value[Count] == '-')return false;
+				Str[strlen(Str)] = Value[Count];
+			}
+
+
 		}
-		if (GetNum == false)return false;
-		if (GetExponential && GetExponentialNum == false)return false;
+		if (GetStr == false)
+		{
+			if (GetNum == false)return false;
+			if (GetExponential && GetExponentialNum == false)return false;
+		}
+		else {
+			if (strcmp(Str, "inf") != 0)return false;
+		}
+
 		return true;
 	}
 	void StrClear(char* Src, size_t Size)

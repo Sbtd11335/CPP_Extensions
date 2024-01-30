@@ -232,7 +232,6 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 	if (strlen(_Formula) == 0)return Type(0.0);
 	if (Extensions::IsValue(_Formula))return Extensions::ToValue<Type>(_Formula);
 	Type* FuncResult = new Type[Extensions::BufferSize]{};
-
 	while (true)
 	{
 		BCount = 0;
@@ -379,6 +378,7 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "sinh") == 0)Result = sinh(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
 					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "tan") == 0)Result = tan(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
 					else if (Extensions::StrCaseCmp(Functions[Count].c_str(), "tanh") == 0)Result = tanh(Extensions::EasyEval<Type>(Formulas[Count].c_str()));
+
 					else Result = Extensions::EasyEval<Type>(Formulas[Count].c_str());
 				}
 				else {
@@ -418,7 +418,6 @@ template<typename Type>Type Extensions::SimpleEval(const char* Formula, size_t S
 		if (BCount <= 0)break;
 	}
 	delete[]FuncResult;
-
 	return Extensions::EasyEval<Type>(_Formula);
 }
 
