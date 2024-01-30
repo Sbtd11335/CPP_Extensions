@@ -114,7 +114,7 @@ template <typename Type>Type Extensions::ToValue(const char* Value)
 	}
 	else {
 		//Str
-		if (strcmp(Str, "inf") == 0)
+		if (Extensions::StrCaseCmp(Str, "inf") == 0 || Extensions::StrCaseCmp(Str, "infinity") == 0)
 		{
 			if (strlen(Minus) == 0)return std::numeric_limits<Type>::infinity();
 			else return -std::numeric_limits<Type>::infinity();
