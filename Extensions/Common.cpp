@@ -120,7 +120,8 @@ namespace Extensions
 			if (GetExponential && GetExponentialNum == false)return false;
 		}
 		else {
-			if (Extensions::StrCaseCmp(Str, "inf") == 0 || Extensions::StrCaseCmp(Str, "infinity") == 0)return false;
+			if (Extensions::StrCaseCmp(Str, "inf") == 0 || Extensions::StrCaseCmp(Str, "infinity") == 0)return true;
+			else return false;
 		}
 
 		return true;
