@@ -9,10 +9,6 @@
 #	include <mutex>
 #endif
 
-#if defined(_MBCS)
-
-#endif
-
 #	ifndef MULTIBYTE_SPACE
 #		define	MULTIBYTE_SPACE "Å@"
 #	endif
@@ -23,6 +19,11 @@
 #	include <stdio.h>
 #	include <stdlib.h>
 #	include <ctype.h>
+#	include <numeric>
+
+#	ifndef INFINITY
+#		define INFINITY ((float)(1e+300 * 1e+300))
+#	endif
 
 namespace Extensions
 {

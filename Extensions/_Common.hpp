@@ -116,8 +116,8 @@ template <typename Type>Type Extensions::ToValue(const char* Value)
 		//Str
 		if (strcmp(Str, "inf") == 0)
 		{
-			if (strlen(Minus) == 0)return INFINITY;
-			else return -INFINITY;
+			if (strlen(Minus) == 0)return std::numeric_limits<Type>::infinity();
+			else return -std::numeric_limits<Type>::infinity();
 		}
 	}
 
